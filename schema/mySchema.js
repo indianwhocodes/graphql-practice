@@ -20,14 +20,18 @@ function fetchResponseByURL(relativeURL) {
 }
 
 function fetchPeople() {
-    return fetchResponseByURL('/users/');
+    return fetchResponseByURL(`/users/`);
+}
+
+function fetchIdByURL(relativeURL) {
+    return fetchResponseByURL(relativeURL);
 }
 
 const { nodeInterface, nodeField } = nodeDefinitions(
     globalId => {
         const { type, id } = fromGlobalId(globalId);
         if (type === 'User') {
-            return fetchResponseByURL(`/users/${id}/`);
+            return fetchIdByURL(`/users/${id}/`);
         }
     },
     object => {
@@ -43,15 +47,19 @@ const UserType = new GraphQLObjectType({
     fields: () => ({
         firstName: {
             type: GraphQLString,
-            resolve: person => person.first_name,
         },
         lastName: {
             type: GraphQLString,
-            resolve: person => person.last_name,
         },
-        email: {type: GraphQLString},
-        password: {type: GraphQLString},
-        permissionLevel: {type: GraphQLInt},
+        email: {
+            type: GraphQLString,
+        },
+        password: {
+            type: GraphQLString,
+        },
+        permissionLevel: {
+            type: GraphQLInt,
+        },
         id: globalIdField('Person'),
     }),
     interfaces: [ nodeInterface ],
@@ -66,6 +74,7 @@ const QueryType = new GraphQLObjectType({
             type: new GraphQLList(UserType),
             resolve: fetchPeople,
        },
+
         node: nodeField,
         user: {
             type: UserType,
@@ -73,8 +82,8 @@ const QueryType = new GraphQLObjectType({
                 id: { type: GraphQLString },
             },
             resolve: (root, args) =>
-                    fetchResponseByURL(`/users/${args.id}/`),
-            },
+                    fetchIdByURL(`/users/${args.id}/`),
+        },
     }),
 });
 

@@ -9,7 +9,7 @@ const BASE_URL = 'http://localhost:3600';
 function getUserByURL(relativeURL) {
     return fetch('${BASE_URL}${relativeURL}')
         .then(res => res.json())
-        .then(json => json.firstName)
+        .then(json => json._id)
 }
 
 const app = express();

@@ -1,3 +1,4 @@
+import DataLoader from "dataloader";
 import {
     GraphQLInt,
     GraphQLList,
@@ -13,7 +14,7 @@ import {
 
 import fetch from 'node-fetch';
 
-const BASE_URL = 'http://localhost:3600'
+const BASE_URL = 'http://localhost:3600';
 
 function fetchResponseByURL(relativeURL) {
     return fetch(`${BASE_URL}${relativeURL}`).then(res => res.json());
@@ -23,19 +24,40 @@ function fetchPeople() {
     return fetchResponseByURL('/users/');
 }
 
+function fetchId() {
+    return fetchResponseByURL('/users/').then(json => json.id);
+}
+
+const userLoader = new DataLoader(
+    urls => Promise.all(urls.map(fetchId))
+);
+
+function fetchfirstName() {
+    return fetchResponseByURL('/users/').then(json => json.firstName);
+}
+function fetchlastName() {
+    return fetchResponseByURL('/users/').then(json => json.lastName);
+}
+function fetchEmail() {
+    return fetchResponseByURL('/users/').then(json => json.email);
+}
+function fetchPermissionLevel() {
+    return fetchResponseByURL('/users/').then(json => json.permissionLevel);
+}
+
 const { nodeInterface, nodeField } = nodeDefinitions(
     globalId => {
         const { type, id } = fromGlobalId(globalId);
         if (type === 'User') {
-            return fetchResponseByURL(`/users/${id}/`);
+            return userLoader.load('/users/${id}/');
         }
     },
     object => {
-        if (object.hasOwnProperty('username')) {
+        if (object.hasOwnProperty('id')) {
             return 'User';
         }
     },
-)
+);
 
 const UserType = new GraphQLObjectType({
     name: 'User',
@@ -43,15 +65,23 @@ const UserType = new GraphQLObjectType({
     fields: () => ({
         firstName: {
             type: GraphQLString,
-            resolve: person => person.first_name,
+            resolve: fetchfirstName,
         },
         lastName: {
             type: GraphQLString,
-            resolve: person => person.last_name,
+            resolve: fetchlastName,
         },
-        email: {type: GraphQLString},
-        password: {type: GraphQLString},
-        permissionLevel: {type: GraphQLInt},
+        email: {
+            type: GraphQLString,
+            resolve: fetchEmail,
+        },
+        password: {
+            type: GraphQLString,
+        },
+        permissionLevel: {
+            type: GraphQLInt,
+            resolve: fetchPermissionLevel,
+        },
         id: globalIdField('Person'),
     }),
     interfaces: [ nodeInterface ],
@@ -65,15 +95,14 @@ const QueryType = new GraphQLObjectType({
         allPeople: {
             type: new GraphQLList(UserType),
             resolve: fetchPeople,
-       },
+        },
         node: nodeField,
         user: {
             type: UserType,
             args: {
                 id: { type: GraphQLString },
             },
-            resolve: (root, args) =>
-                    fetchResponseByURL(`/users/${args.id}/`),
+            resolve: (root, args) => userLoader.load(`/users/${args.id}/`),
             },
     }),
 });
